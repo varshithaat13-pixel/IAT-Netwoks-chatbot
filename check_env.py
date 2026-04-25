@@ -1,31 +1,29 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
-import requests
+from openai import OpenAI
 
 load_dotenv()
 
 def check_resources():
-    print("--- Environment Check ---")
+    print("--- Environment Check (OpenAI Migration) ---")
     print(f"DB_HOST: {os.getenv('DB_HOST')}")
-    print(f"OLLAMA_BASE_URL: {os.getenv('OLLAMA_BASE_URL')}")
-    print(f"OLLAMA_EMBED_MODEL: {os.getenv('OLLAMA_EMBED_MODEL')}")
+    print(f"OPENAI_MODEL: {os.getenv('OPENAI_MODEL', 'gpt-4o-mini')}")
 
-    # 1. Check Ollama
-    print("\n--- Checking Ollama ---")
-    try:
-        response = requests.get(f"{os.getenv('OLLAMA_BASE_URL')}/api/tags")
-        if response.status_code == 200:
-            models = [m['name'] for m in response.json().get('models', [])]
-            print(f"Available models: {models}")
-            if any(os.getenv('OLLAMA_EMBED_MODEL').split(':')[0] in m for m in models):
-                print("Model found!")
-            else:
-                print("Warning: Model not found in tags, will try to pull if needed or fail during embedding.")
-        else:
-            print(f"Failed to reach Ollama: {response.status_code}")
-    except Exception as e:
-        print(f"Error connecting to Ollama: {e}")
+    # 1. Check OpenAI API
+    print("\n--- Checking OpenAI ---")
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("❌ Error: OPENAI_API_KEY is missing from environment variables.")
+    else:
+        try:
+            client = OpenAI(api_key=api_key)
+            # Simple test to check API connectivity
+            models = client.models.list()
+            print("✅ OpenAI API Connectivity: OK")
+            print(f"✅ API Key validated (can list models).")
+        except Exception as e:
+            print(f"❌ Error connecting to OpenAI: {e}")
 
     # 2. Check Database and pgvector
     print("\n--- Checking Database ---")
@@ -39,24 +37,24 @@ def check_resources():
         )
         cur = conn.cursor()
         cur.execute("SELECT version();")
-        print(f"DB Version: {cur.fetchone()[0]}")
+        print(f"✅ DB Version: {cur.fetchone()[0]}")
         
         cur.execute("SELECT extname FROM pg_extension WHERE extname = 'vector';")
         if cur.fetchone():
-            print("pgvector extension is already installed.")
+            print("✅ pgvector extension is already installed.")
         else:
-            print("pgvector extension is NOT installed. Attempting to enable (requires superuser/owner)...")
+            print("⚠️ pgvector extension is NOT installed. Attempting to enable...")
             try:
                 cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
                 conn.commit()
-                print("pgvector enabled successfully.")
+                print("✅ pgvector enabled successfully.")
             except Exception as ex:
-                print(f"Failed to enable pgvector: {ex}")
+                print(f"❌ Failed to enable pgvector: {ex}")
         
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"Error connecting to DB: {e}")
+        print(f"❌ Error connecting to DB: {e}")
 
 if __name__ == "__main__":
     check_resources()

@@ -31,7 +31,6 @@ INTENTS = {
 def get_query_embedding(query):
     """
     Generate embedding for the user query via OpenAI API.
-    Replaces the previous local Ollama dependency.
     """
     try:
         response = client.embeddings.create(

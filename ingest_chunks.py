@@ -1,8 +1,8 @@
 import os
 import json
-import requests
 import psycopg2
 from psycopg2.extras import execute_values
+from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load config
@@ -14,29 +14,37 @@ DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL')
-OLLAMA_EMBED_MODEL = os.getenv('OLLAMA_EMBED_MODEL')
+# OpenAI Config
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+EMBEDDING_MODEL = "text-embedding-3-small" # Standard production model
 
-BATCH_SIZE = 5
+# Initialize OpenAI Client
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+BATCH_SIZE = 10 # Increased for OpenAI efficiency
 
 def get_embedding(text):
-    url = f"{OLLAMA_BASE_URL}/api/embeddings"
-    payload = {
-        "model": OLLAMA_EMBED_MODEL,
-        "prompt": text
-    }
-    response = requests.post(url, json=payload)
-    response.raise_for_status()
-    return response.json()["embedding"]
+    """Generate embedding using OpenAI API."""
+    try:
+        response = client.embeddings.create(
+            model=EMBEDDING_MODEL,
+            input=text
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"Error generating embedding for text: {text[:50]}... Error: {e}")
+        raise e
 
 def get_dim():
-    print(f"Validating embedding dimension for model {OLLAMA_EMBED_MODEL}...")
+    """Detect embedding dimension for the selected OpenAI model."""
+    print(f"Validating embedding dimension for model {EMBEDDING_MODEL}...")
     emb = get_embedding("test")
     dim = len(emb)
     print(f"Detected dimension: {dim}")
     return dim
 
 def setup_db(dim):
+    """Setup PostgreSQL database with pgvector support."""
     conn = psycopg2.connect(
         host=DB_HOST, port=DB_PORT, database=DB_NAME,
         user=DB_USER, password=DB_PASSWORD
@@ -46,6 +54,22 @@ def setup_db(dim):
     # Ensure pgvector is enabled
     cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
     
+    # Note: If migrating embedding models with different dimensions,
+    # the table MUST be recreated.
+    cur.execute(f"""
+        DO $$ 
+        BEGIN 
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'chunks') THEN
+                -- Check if dimension matches
+                IF (SELECT atttypmod FROM pg_attribute 
+                    WHERE attrelid = 'chunks'::regclass AND attname = 'embedding') != {dim} + 4 THEN
+                    RAISE NOTICE 'Dimension mismatch detected. Dropping and recreating table.';
+                    DROP TABLE chunks;
+                END IF;
+            END IF;
+        END $$;
+    """)
+
     # Create table
     create_table_query = f"""
     CREATE TABLE IF NOT EXISTS chunks (
@@ -65,6 +89,7 @@ def setup_db(dim):
     return conn, cur
 
 def ingest():
+    """Run the ingestion pipeline: Read JSON -> Embed -> Upsert to DB."""
     try:
         # PowerShell redirects often use utf-16
         with open('final_chunks.json', 'r', encoding='utf-16') as f:
@@ -84,13 +109,8 @@ def ingest():
     except Exception as e:
         return {
             "status": "failure",
-            "total_chunks": total_chunks,
-            "inserted_chunks": 0,
-            "failed_chunks": total_chunks,
-            "embedding_model": OLLAMA_EMBED_MODEL,
-            "database": DB_NAME,
-            "table": "chunks",
-            "notes": [f"Setup failed: {str(e)}"]
+            "error": str(e),
+            "notes": "Ensure database is reachable and OpenAI API key is valid."
         }
 
     upsert_query = """
@@ -98,6 +118,7 @@ def ingest():
     VALUES %s
     ON CONFLICT (id) DO UPDATE SET
         embedding = EXCLUDED.embedding,
+        text = EXCLUDED.text,
         section = EXCLUDED.section,
         sub_section = EXCLUDED.sub_section,
         intent = EXCLUDED.intent,
@@ -149,55 +170,15 @@ def ingest():
         "total_chunks": total_chunks,
         "inserted_chunks": inserted_count,
         "failed_chunks": len(failed_chunks),
-        "embedding_model": OLLAMA_EMBED_MODEL,
+        "embedding_model": EMBEDDING_MODEL,
         "database": DB_NAME,
         "table": "chunks",
-        "notes": [f"Errors: {failed_chunks}"] if failed_chunks else []
+        "errors": failed_chunks[:5] # Show first 5 errors
     }
     return summary
 
-def retrieval_test(query, top_k=3):
-    print(f"\n--- Retrieval Test for query: '{query}' ---")
-    try:
-        emb = get_embedding(query)
-        conn = psycopg2.connect(
-            host=DB_HOST, port=DB_PORT, database=DB_NAME,
-            user=DB_USER, password=DB_PASSWORD
-        )
-        cur = conn.cursor()
-        
-        # Simple cosine similarity (using <=> for cosine distance, so smaller is closer)
-        test_query = """
-        SELECT id, text, section, 1 - (embedding <=> %s::vector) AS similarity
-        FROM chunks
-        ORDER BY embedding <=> %s::vector
-        LIMIT %s;
-        """
-        cur.execute(test_query, (emb, emb, top_k))
-        results = cur.fetchall()
-        
-        formatted_results = []
-        for r in results:
-            formatted_results.append({
-                "id": r[0],
-                "text": r[1][:100] + "...",
-                "section": r[2],
-                "similarity": float(r[3])
-            })
-        
-        cur.close()
-        conn.close()
-        return formatted_results
-    except Exception as e:
-        return {"error": f"Retrieval failed: {str(e)}"}
-
 if __name__ == "__main__":
+    print("--- IAT Networks Knowledge Ingestion (OpenAI Migration) ---")
     result_summary = ingest()
     print("\n--- INGESTION SUMMARY ---")
     print(json.dumps(result_summary, indent=2))
-    
-    # Short delay to ensure commit visibility or just proceed
-    test_query = "What are the contact details for IAT Networks?"
-    retrieval_results = retrieval_test(test_query)
-    print("\n--- RETRIEVAL RESULTS ---")
-    print(json.dumps(retrieval_results, indent=2))
