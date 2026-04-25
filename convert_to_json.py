@@ -1,0 +1,231 @@
+# -*- coding: utf-8 -*-
+import json
+
+structured_data = {
+    "company_overview": (
+        "IAT Networks is a Vellore-based consulting and outsourcing firm founded in February 2025 by Ishwarya S. "
+        "The company provides global BPO (Business Process Outsourcing), IT services, digital marketing, and "
+        "workforce/staffing solutions. It positions itself as a quality-driven, cost-effective, and transparent "
+        "partner focused on empowering businesses with smart, scalable, and reliable technology solutions. "
+        "IAT Networks serves clients across industries with end-to-end support, combining technical expertise "
+        "with strategic business collaboration."
+    ),
+    "about_company": {
+        "founded": "February 2025",
+        "founder": "Ishwarya S (tech entrepreneur, Master's in Computer Science)",
+        "location": "Katpadi, Vellore, Tamil Nadu 632007, India",
+        "mission": (
+            "To empower businesses with smart, scalable, and reliable technology solutions."
+        ),
+        "vision": (
+            "To become a globally trusted partner in IT services and workforce solutions."
+        ),
+        "description": (
+            "IAT Networks is a small but growing IT and business services company that links organizations with "
+            "talent and technology. Founded in February 2025 by Ishwarya S, the company operates from Vellore, "
+            "Tamil Nadu, and aims to expand its reach globally. It emphasizes integrity, professionalism, and "
+            "customized client relationships while delivering comprehensive BPO, recruitment, digital marketing, "
+            "and IT solutions. The founding tagline is: 'Best Consulting services in Vellore, Tamilnadu'."
+        )
+    },
+    "services": [
+        {
+            "category": "BPO & Customer Support",
+            "description": (
+                "Comprehensive back-office outsourcing services designed to reduce client costs and improve "
+                "operational efficiency. IAT Networks manages back-office processes, customer support, and "
+                "administrative tasks with precision, allowing clients to focus on their core business."
+            ),
+            "sub_services": [
+                "Customer service and call center operations",
+                "Technical support and IT helpdesk",
+                "Back-office operations and data entry",
+                "HR and payroll support",
+                "Finance and accounting support",
+                "Email and chat support"
+            ]
+        },
+        {
+            "category": "Digital Marketing",
+            "description": (
+                "End-to-end online marketing solutions to grow client brands and reach target audiences "
+                "effectively. IAT Networks combines creativity and data analytics to deliver measurable "
+                "marketing results."
+            ),
+            "sub_services": [
+                "Search Engine Optimization (SEO)",
+                "Social media marketing and management",
+                "Email marketing campaigns",
+                "Google Ads and paid advertising",
+                "Lead generation",
+                "Website and content marketing"
+            ]
+        },
+        {
+            "category": "Recruitment & Staffing",
+            "description": (
+                "Efficient hiring solutions that connect businesses with skilled professionals quickly. "
+                "IAT Networks offers both direct permanent placements and full recruitment process outsourcing "
+                "for organizations looking to scale their teams."
+            ),
+            "sub_services": [
+                "Permanent staffing (direct full-time hires)",
+                "Recruitment Process Outsourcing (RPO)",
+                "Project-based talent deployment",
+                "HR management support",
+                "Sector-specific recruitment (healthcare, banking)"
+            ]
+        },
+        {
+            "category": "Manpower Supply / Contract Staffing",
+            "description": (
+                "Supply of temporary and contract workers across various industries. IAT Networks provides "
+                "flexible workforce solutions for businesses requiring short-term or project-based staffing."
+            ),
+            "sub_services": [
+                "Temporary and permanent staffing",
+                "Contract and project-based deployment",
+                "Healthcare and medical staffing support",
+                "Banking and financial services staffing",
+                "HR consulting"
+            ]
+        },
+        {
+            "category": "IT & Software Services",
+            "description": (
+                "End-to-end technology solutions ranging from hardware/software setup to custom software "
+                "development and cloud infrastructure. IAT Networks delivers scalable IT solutions aligned "
+                "with the client's growth strategy."
+            ),
+            "sub_services": [
+                "Hardware and software installation and setup",
+                "Custom software development",
+                "IT infrastructure and network management",
+                "DevOps and cloud infrastructure",
+                "ServiceNow solutions"
+            ]
+        }
+    ],
+    "business_capabilities": {
+        "strengths": [
+            "Experienced and trained professional team",
+            "Quality-driven and transparent service delivery process",
+            "Cost-effective and competitively priced solutions",
+            "Strategic planning and expert consultation",
+            "Team collaboration and cross-functional coordination",
+            "Scalable and innovation-focused technology solutions",
+            "Client-centric approach with a focus on feedback and satisfaction",
+            "Global ambition with operations based in Vellore, Tamil Nadu"
+        ],
+        "values": [
+            "Integrity and professionalism in all client relationships",
+            "Transparency in processes and communication",
+            "Commitment to client success and satisfaction",
+            "Innovation and agility in service delivery",
+            "Reliability and trustworthiness as a long-term partner"
+        ],
+        "industries_served": [
+            "Healthcare and medical services",
+            "Banking and financial services",
+            "General business and enterprise (unspecified)",
+            "Technology and IT organizations"
+        ]
+    },
+    "contact_information": {
+        "phone": "+91 73588 34638",
+        "email": "hr@iatnetworks.com",
+        "address": "Katpadi, Vellore, Tamil Nadu 632007, India",
+        "working_hours": "Monday to Saturday, 9:00 AM – 5:00 PM"
+    },
+    "website_pages": [
+        {
+            "page_name": "Home",
+            "url": "https://iatnetworks.com/",
+            "purpose": "Main promotional landing page providing a company introduction and marketing overview.",
+            "summary": (
+                "Features a banner with the tagline 'Best Consulting services in Vellore, Tamilnadu', "
+                "a welcome description of the company's global BPO, IT, and workforce offerings, a 'Why Us' "
+                "section highlighting key differentiators (Experienced & Trusted, Cost Effective, etc.), "
+                "summarized service offerings, client logos, and a 'Stay In Touch' section with contact "
+                "details. Also includes brief definitions of Permanent Staffing and RPO."
+            )
+        },
+        {
+            "page_name": "About Us",
+            "url": "https://iatnetworks.com/about-2-consulting-service-vellore/",
+            "purpose": "Provides company background, founding story, leadership profile, mission, and vision.",
+            "summary": (
+                "Covers the founding story: 'Founded in February 2025 by Ishwarya S as a global enterprise "
+                "offering IT, BPO and resource outsourcing services.' Includes the founder's educational "
+                "background (Master's in Computer Science) and entrepreneurial vision. States the company "
+                "mission to empower businesses with smart, scalable, and reliable technology solutions, and "
+                "the vision to become a globally trusted partner in IT services and workforce solutions."
+            )
+        },
+        {
+            "page_name": "Services",
+            "url": "https://iatnetworks.com/services-consultancy/",
+            "purpose": "Detailed catalog of all services offered by IAT Networks.",
+            "summary": (
+                "Breaks down four main service categories: BPO & Customer Support (customer service, call "
+                "center, back-office, HR/payroll, finance, email/chat support); Digital Marketing (SEO, "
+                "social media, ads, lead generation); Manpower Supply (temporary/permanent staffing, HR "
+                "consulting, sector-specific staffing); and IT Services (hardware/software, custom "
+                "development, infrastructure, DevOps, ServiceNow). Content is presented in bullet-list form."
+            )
+        },
+        {
+            "page_name": "Contact",
+            "url": "https://iatnetworks.com/contact-2/",
+            "purpose": "Allows potential clients and job applicants to contact the company.",
+            "summary": (
+                "Lists the company phone number (+91 73588 34638), business hours (Mon–Sat, 9 AM–5 PM), "
+                "office location (Katpadi, Vellore, Tamilnadu 632007), and email (hr@iatnetworks.com). "
+                "Includes a contact/CV submission form and a link to the privacy policy."
+            )
+        },
+        {
+            "page_name": "Privacy Policy",
+            "url": "https://iatnetworks.com/privacy-policy-2/",
+            "purpose": "Informs users about data collection practices and legal compliance.",
+            "summary": (
+                "Standard privacy policy page confirming the site address (iatnetworks.com), types of data "
+                "collected (name, phone, email), use of cookies, and user rights. Repeats the HR contact "
+                "email for data/privacy inquiries. Contains standard legal boilerplate with no additional "
+                "business or service information."
+            )
+        }
+    ],
+    "policies": {
+        "privacy_policy": (
+            "IAT Networks collects user contact information (name, phone number, and email address) when "
+            "submitted via the website contact form. The website uses cookies. Users may contact "
+            "hr@iatnetworks.com for any data or privacy-related inquiries. The privacy policy is accessible "
+            "at https://iatnetworks.com/privacy-policy-2/."
+        ),
+        "other_policies": [
+            "No Terms of Service or Terms & Conditions document is available on the website.",
+            "No refund or service guarantee policy is published."
+        ]
+    },
+    "faqs": [],
+    "missing_information": [
+        "Pricing and service packages are not available; users must contact the company for quotes.",
+        "No dedicated careers page or listing of open job positions found.",
+        "No industry-specific case studies or detailed client success stories available.",
+        "No client testimonials with names or verifiable references.",
+        "No FAQ section or help articles addressing common customer questions.",
+        "No blog, news, or insights page found.",
+        "No Terms of Service or service agreement document published.",
+        "Company financials, annual revenue, and number of employees are not disclosed.",
+        "No social media profile links found on the website (only a LinkedIn icon for the founder).",
+        "No information on service-level agreements (SLAs) or delivery timelines.",
+        "Street-level address (building number, street name) is not provided; only city and PIN code."
+    ]
+}
+
+output_path = "IAT_Networks_Structured.json"
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(structured_data, f, ensure_ascii=False, indent=2)
+
+print(f"JSON successfully written to: {output_path}")
