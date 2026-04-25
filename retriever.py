@@ -1,6 +1,6 @@
 import os
 import psycopg2
-from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -13,13 +13,17 @@ DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-# OpenAI Configuration
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-# Using text-embedding-3-small for production efficiency
-EMBEDDING_MODEL = "text-embedding-3-small"
-
-# Initialize OpenAI Client
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize SentenceTransformer
+# We use nomic-embed-text-v1 to maintain compatibility with the 768-dim embeddings in the DB.
+# This model is free, open-source, and matches the existing vector space.
+try:
+    print("Loading embedding model (nomic-ai/nomic-embed-text-v1)...")
+    # Note: nomic-embed-text-v1 usually requires a prefix for queries: "search_query: "
+    model = SentenceTransformer('nomic-ai/nomic-embed-text-v1', trust_remote_code=True)
+except Exception as e:
+    print(f"Error loading local embedding model: {e}")
+    # Fallback to a standard 768-dim model if nomic fails
+    model = SentenceTransformer('all-mpnet-base-v2')
 
 # Intent Categories & Keywords for heuristic re-ranking
 INTENTS = {
@@ -28,16 +32,16 @@ INTENTS = {
     "company": ["about", "mission", "vision", "company", "overview"]
 }
 
-def get_query_embedding(query):
+def get_query_embedding(text):
     """
-    Generate embedding for the user query via OpenAI API.
+    Generate embedding for the user query using a local model.
+    Matches the 768-dimension embeddings stored in the DB.
     """
     try:
-        response = client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=query
-        )
-        return response.data[0].embedding
+        # Nomic embeddings perform better with the 'search_query: ' prefix
+        formatted_text = f"search_query: {text}"
+        embedding = model.encode(formatted_text).tolist()
+        return embedding
     except Exception as e:
         print(f"Error generating embedding: {e}")
         return None
@@ -51,7 +55,7 @@ def detect_intent(query):
             detected.append(intent)
     return detected
 
-def retrieve_top_chunks(query, top_k=5):
+def retrieve_top_chunks(query, top_k=3):
     """
     Retrieve top chunks with semantic search and heuristic re-ranking.
     Uses pgvector for similarity search in the PostgreSQL database.
@@ -69,8 +73,7 @@ def retrieve_top_chunks(query, top_k=5):
         )
         cur = conn.cursor()
 
-        # SQL similarity search using pgvector
-        # Note: Ensure the 'chunks' table in production has been re-indexed with OpenAI embeddings
+        # SQL similarity search using pgvector (Cosine Similarity)
         search_query = """
         SELECT id, text, section, sub_section, priority, 
                1 - (embedding <=> %s::vector) AS similarity

@@ -1,16 +1,16 @@
 import os
-from openai import OpenAI
+from groq import Groq
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
 # Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_MODEL = os.getenv("GROQ_MODEL")
 
-# Initialize OpenAI Client
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Initialize Groq Client
+client = Groq(api_key=GROQ_API_KEY)
 
 SYSTEM_PROMPT = """You name is Lency and you are the front desk assistant for IAT Networks.
 
@@ -61,18 +61,14 @@ def build_prompt_context(chunks):
 
 def generate_response(context: str, query: str) -> str:
     """
-    Generate final answer using the OpenAI API and provided context.
-    
-    Args:
-        context (str): The concatenated retrieved knowledge chunks.
-        query (str): The user's question.
-        
-    Returns:
-        str: The generated text response.
+    Generate final answer using the Groq API and provided context.
     """
+    if not context or context.strip() == "":
+        return "I'm sorry, I don't have that information in my knowledge base. Please try asking something else or contact our support team."
+
     try:
-        response = client.chat.completions.create(
-            model=OPENAI_MODEL,
+        completion = client.chat.completions.create(
+            model=GROQ_MODEL,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"Context Information:\n{context}\n\nUser Question: {query}"}
@@ -80,22 +76,26 @@ def generate_response(context: str, query: str) -> str:
             temperature=0.3,
             max_tokens=500
         )
-        return response.choices[0].message.content
-    except Exception:
-        # Return the required fallback message on any API failure
+        return completion.choices[0].message.content
+    except Exception as e:
+        print(f"Groq API Error: {e}")
+        # Return safe fallback message as requested
         return "I'm sorry, I encountered an internal error. Please try again or contact support."
 
 def generate_answer(query, chunks):
     """
-    Legacy wrapper to maintain compatibility with existing components.
+    Legacy wrapper to maintain compatibility with main.py.
     Processes chunks into a context string and calls generate_response.
     """
+    if not chunks:
+        return "I'm sorry, I do not have information about that. Please contact IAT Networks directly for assistance."
+        
     context = build_prompt_context(chunks)
     return generate_response(context, query)
 
 if __name__ == "__main__":
-    # Mock test for production validation
+    # Mock test
     mock_chunks = [{"section": "contact", "text": "Our office is in Katpadi, Vellore."}]
     test_context = build_prompt_context(mock_chunks)
-    print("Testing generate_response:")
+    print("Testing Groq generation:")
     print(generate_response(test_context, "Where are you located?"))

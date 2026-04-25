@@ -1,29 +1,28 @@
 import os
 import psycopg2
 from dotenv import load_dotenv
-from openai import OpenAI
+from groq import Groq
 
 load_dotenv()
 
 def check_resources():
-    print("--- Environment Check (OpenAI Migration) ---")
+    print("--- Environment Check (Groq & Sentence-Transformers Migration) ---")
     print(f"DB_HOST: {os.getenv('DB_HOST')}")
-    print(f"OPENAI_MODEL: {os.getenv('OPENAI_MODEL', 'gpt-4o-mini')}")
+    print(f"DB_NAME: {os.getenv('DB_NAME')}")
 
-    # 1. Check OpenAI API
-    print("\n--- Checking OpenAI ---")
-    api_key = os.getenv("OPENAI_API_KEY")
+    # 1. Check Groq API
+    print("\n--- Checking Groq API ---")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
-        print("❌ Error: OPENAI_API_KEY is missing from environment variables.")
+        print("❌ Error: GROQ_API_KEY is missing from environment variables.")
     else:
         try:
-            client = OpenAI(api_key=api_key)
+            client = Groq(api_key=api_key)
             # Simple test to check API connectivity
             models = client.models.list()
-            print("✅ OpenAI API Connectivity: OK")
-            print(f"✅ API Key validated (can list models).")
+            print("✅ Groq API Connectivity: OK")
         except Exception as e:
-            print(f"❌ Error connecting to OpenAI: {e}")
+            print(f"❌ Error connecting to Groq: {e}")
 
     # 2. Check Database and pgvector
     print("\n--- Checking Database ---")
@@ -43,14 +42,12 @@ def check_resources():
         if cur.fetchone():
             print("✅ pgvector extension is already installed.")
         else:
-            print("⚠️ pgvector extension is NOT installed. Attempting to enable...")
-            try:
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-                conn.commit()
-                print("✅ pgvector enabled successfully.")
-            except Exception as ex:
-                print(f"❌ Failed to enable pgvector: {ex}")
+            print("⚠️ pgvector extension is NOT installed.")
         
+        cur.execute("SELECT COUNT(*) FROM chunks;")
+        count = cur.fetchone()[0]
+        print(f"✅ Knowledge Base: {count} chunks found.")
+
         cur.close()
         conn.close()
     except Exception as e:

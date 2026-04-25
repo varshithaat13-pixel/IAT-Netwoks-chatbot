@@ -1,4 +1,5 @@
 import uvicorn
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,14 +9,14 @@ from generator import generate_answer
 
 app = FastAPI(
     title="IAT Networks Front Desk AI",
-    description="RAG-based Chatbot API for IAT Networks Internal Knowledge Base",
-    version="1.0.0"
+    description="RAG-based Chatbot API using Groq and Sentence Transformers",
+    version="1.1.0"
 )
 
 # CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all for local development
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,16 +44,16 @@ def read_root():
 async def chat_endpoint(request: ChatRequest):
     """
     Main chat endpoint for the IAT Networks RAG Chatbot.
-    Accepts a user query, retrieves relevant information, and generates a response.
+    Accepts a user query, retrieves relevant information, and generates a response via Groq.
     """
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
     try:
-        # 1. Retrieval & Re-ranking
+        # 1. Retrieval & Re-ranking (Local Sentence-Transformers)
         relevant_chunks = retrieve_top_chunks(request.query, top_k=request.top_k)
         
-        # 2. Generation
+        # 2. Generation (Groq Llama-3)
         answer = generate_answer(request.query, relevant_chunks)
         
         # 3. Format Response
@@ -67,9 +68,15 @@ async def chat_endpoint(request: ChatRequest):
         )
 
     except Exception as e:
-        # Logging here in a real production environment
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        print(f"Server Error: {e}")
+        # Safe fallback in case of unexpected pipeline failure
+        return ChatResponse(
+            answer="I'm sorry, I encountered an internal error while processing your request. Please try again later.",
+            sources=[]
+        )
 
-# CLI Entry point for local dev
+# CLI Entry point for production/local dev
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use PORT environment variable for Render compatibility
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
