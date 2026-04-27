@@ -9,8 +9,8 @@ from generator import generate_answer
 
 app = FastAPI(
     title="IAT Networks Front Desk AI",
-    description="RAG-based Chatbot API using Groq and Sentence Transformers",
-    version="1.1.0"
+    description="Ultra-lightweight RAG Chatbot optimized for Render Free Tier (API-based)",
+    version="1.2.0"
 )
 
 # CORS Configuration
@@ -68,10 +68,9 @@ async def chat_endpoint(request: ChatRequest):
         )
 
     except Exception as e:
-        print(f"Server Error: {e}")
-        # Safe fallback in case of unexpected pipeline failure
+        print(f"CRITICAL SERVER ERROR: {e}")
         return ChatResponse(
-            answer="I'm sorry, I encountered an internal error while processing your request. Please try again later.",
+            answer="I'm sorry, I'm having trouble connecting to my knowledge base right now. Please try again in a few seconds.",
             sources=[]
         )
 

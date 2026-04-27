@@ -78,9 +78,14 @@ def generate_response(context: str, query: str) -> str:
         )
         return completion.choices[0].message.content
     except Exception as e:
-        print(f"Groq API Error: {e}")
-        # Return safe fallback message as requested
-        return "I'm sorry, I encountered an internal error. Please try again or contact support."
+        # Check for specific Groq error types if needed (e.g. rate limits)
+        error_msg = str(e)
+        print(f"Groq API Error: {error_msg}")
+        
+        if "rate_limit" in error_msg.lower():
+            return "I'm sorry, I'm currently handling too many requests. Please try again in a moment."
+            
+        return "I'm sorry, I encountered an issue while generating a response. Please try again or contact support."
 
 def generate_answer(query, chunks):
     """

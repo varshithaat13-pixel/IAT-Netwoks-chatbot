@@ -3,8 +3,4 @@ uvicorn
 psycopg2-binary
 python-dotenv
 groq
-numpy
 requests
-sentence-transformers
-torch
-einops
