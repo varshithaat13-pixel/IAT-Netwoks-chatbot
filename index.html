@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -96,8 +97,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .user-message {
@@ -142,12 +150,25 @@
             animation: bounce 1.4s infinite ease-in-out both;
         }
 
-        .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+        .typing-dots span:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .typing-dots span:nth-child(2) {
+            animation-delay: -0.16s;
+        }
 
         @keyframes bounce {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1.0); }
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1.0);
+            }
         }
 
         .input-area {
@@ -203,11 +224,21 @@
         }
 
         /* Markdown-like formatting support */
-        .bot-message p { margin-bottom: 8px; }
-        .bot-message ul { margin-left: 1.5rem; margin-bottom: 8px; }
-        .bot-message li { margin-bottom: 4px; }
+        .bot-message p {
+            margin-bottom: 8px;
+        }
+
+        .bot-message ul {
+            margin-left: 1.5rem;
+            margin-bottom: 8px;
+        }
+
+        .bot-message li {
+            margin-bottom: 4px;
+        }
     </style>
 </head>
+
 <body>
 
     <div id="chat-container">
@@ -246,12 +277,12 @@
         const errorBox = document.getElementById('error-box');
         const sendBtn = document.getElementById('send-btn');
 
-        const API_URL = 'http://localhost:8000/chat';
+        const API_URL = 'https://iat-netwoks-chatbot.onrender.com/chat';
 
         function appendMessage(text, role, sources = []) {
             const msgDiv = document.createElement('div');
             msgDiv.className = `message ${role}-message`;
-            
+
             // Format bullet points if present
             let formattedText = text.replace(/\n\* /g, '<br>• ').replace(/\n/g, '<br>');
             msgDiv.innerHTML = formattedText;
@@ -278,14 +309,14 @@
 
         chatForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const query = userInput.value.strip ? userInput.value.strip() : userInput.value.trim();
             if (!query) return;
 
             // Clear input and show message
             userInput.value = '';
             appendMessage(query, 'user');
-            
+
             // Show loading
             loadingIndicator.style.display = 'block';
             messageArea.scrollTop = messageArea.scrollHeight;
@@ -305,10 +336,10 @@
                 }
 
                 const data = await response.json();
-                
+
                 // Hide loading
                 loadingIndicator.style.display = 'none';
-                
+
                 // Display bot message
                 appendMessage(data.answer, 'bot', data.sources);
 
@@ -326,4 +357,5 @@
         window.onload = () => userInput.focus();
     </script>
 </body>
+
 </html>
