@@ -1,8 +1,9 @@
 import os
 import json
 import psycopg2
+import requests
+import time
 from psycopg2.extras import execute_values
-from openai import OpenAI
 from dotenv import load_dotenv
 
 # Load config
@@ -14,29 +15,59 @@ DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 
-# OpenAI Config
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-EMBEDDING_MODEL = "text-embedding-3-small" # Standard production model
+# HuggingFace Config
+HF_API_KEY = os.getenv('HF_API_KEY')
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+# Correct Router URL for HuggingFace Inference API
+HF_EMBED_URL = f"https://router.huggingface.co/hf-inference/models/{EMBEDDING_MODEL}/pipeline/feature-extraction"
 
-# Initialize OpenAI Client
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-BATCH_SIZE = 10 # Increased for OpenAI efficiency
+BATCH_SIZE = 10 # Optimized batch size for ingestion
 
 def get_embedding(text):
-    """Generate embedding using OpenAI API."""
-    try:
-        response = client.embeddings.create(
-            model=EMBEDDING_MODEL,
-            input=text
-        )
-        return response.data[0].embedding
-    except Exception as e:
-        print(f"Error generating embedding for text: {text[:50]}... Error: {e}")
-        raise e
+    """Generate embedding using HuggingFace Inference API with retry logic."""
+    headers = {"Authorization": f"Bearer {HF_API_KEY}"}
+    
+    for attempt in range(5): # More retries for ingestion
+        try:
+            response = requests.post(
+                HF_EMBED_URL,
+                headers=headers,
+                json={"inputs": text},
+                timeout=20
+            )
+            
+            if response.status_code == 200:
+                embedding = response.json()
+                if isinstance(embedding, list) and len(embedding) > 0:
+                    if isinstance(embedding[0], list):
+                        return embedding[0]
+                    return embedding
+                raise ValueError("Unexpected response format from HF")
+            
+            if response.status_code == 503:
+                print(f"HF API 503: Model loading. Waiting 15s (Attempt {attempt+1})")
+                time.sleep(15)
+                continue
+                
+            if response.status_code == 429:
+                print("HF API 429: Rate limit hit. Waiting 20s...")
+                time.sleep(20)
+                continue
+
+            print(f"HF API Error: {response.status_code} - {response.text}")
+            raise Exception(f"HF API Error {response.status_code}")
+            
+        except requests.exceptions.Timeout:
+            print("HF API Timeout. Retrying...")
+            continue
+        except Exception as e:
+            print(f"Error generating embedding: {e}")
+            raise e
+            
+    raise Exception("Max retries exceeded for HF Embedding API")
 
 def get_dim():
-    """Detect embedding dimension for the selected OpenAI model."""
+    """Detect embedding dimension for the selected model."""
     print(f"Validating embedding dimension for model {EMBEDDING_MODEL}...")
     emb = get_embedding("test")
     dim = len(emb)
@@ -60,7 +91,7 @@ def setup_db(dim):
         DO $$ 
         BEGIN 
             IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'chunks') THEN
-                -- Check if dimension matches
+                -- Check if dimension matches (384 for all-MiniLM-L6-v2)
                 IF (SELECT atttypmod FROM pg_attribute 
                     WHERE attrelid = 'chunks'::regclass AND attname = 'embedding') != {dim} + 4 THEN
                     RAISE NOTICE 'Dimension mismatch detected. Dropping and recreating table.';
@@ -91,11 +122,9 @@ def setup_db(dim):
 def ingest():
     """Run the ingestion pipeline: Read JSON -> Embed -> Upsert to DB."""
     try:
-        # PowerShell redirects often use utf-16
         with open('final_chunks.json', 'r', encoding='utf-16') as f:
             chunks = json.load(f)
     except (UnicodeDecodeError, json.JSONDecodeError):
-        # Fallback to utf-8
         with open('final_chunks.json', 'r', encoding='utf-8') as f:
             chunks = json.load(f)
     
@@ -110,7 +139,7 @@ def ingest():
         return {
             "status": "failure",
             "error": str(e),
-            "notes": "Ensure database is reachable and OpenAI API key is valid."
+            "notes": "Ensure database is reachable and HF API key is valid."
         }
 
     upsert_query = """
@@ -163,22 +192,18 @@ def ingest():
     cur.close()
     conn.close()
 
-    status = "success" if not failed_chunks else ("partial_success" if inserted_count > 0 else "failure")
-    
     summary = {
-        "status": status,
+        "status": "success" if not failed_chunks else "partial_success",
         "total_chunks": total_chunks,
         "inserted_chunks": inserted_count,
         "failed_chunks": len(failed_chunks),
         "embedding_model": EMBEDDING_MODEL,
-        "database": DB_NAME,
-        "table": "chunks",
-        "errors": failed_chunks[:5] # Show first 5 errors
+        "database": DB_NAME
     }
     return summary
 
 if __name__ == "__main__":
-    print("--- IAT Networks Knowledge Ingestion (OpenAI Migration) ---")
+    print(f"--- IAT Networks Knowledge Ingestion (HF Router Fix) ---")
     result_summary = ingest()
     print("\n--- INGESTION SUMMARY ---")
     print(json.dumps(result_summary, indent=2))
